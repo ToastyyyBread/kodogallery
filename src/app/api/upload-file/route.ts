@@ -1,15 +1,7 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
-
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY!,
-    secretAccessKey: process.env.R2_SECRET_KEY!,
-  },
-});
+import { s3, R2_BUCKET } from "@/lib/s3";
 
 /** Extensions that should be converted to WebP */
 const CONVERTIBLE = new Set(["png", "jpg", "jpeg", "tiff", "bmp"]);

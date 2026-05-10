@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3, R2_BUCKET } from "@/lib/s3";
 
-const ORDER_FILE = path.join(process.cwd(), "data", "char-order.json");
+const KEY = "config/char-order.json";
 
-/**
- * POST /api/reorder-chars
- * Body: { seriesSlug: string, order: string[] }  — character slugs in desired order
- */
 export async function POST(req: NextRequest) {
   try {
     const { seriesSlug, order } = await req.json();
@@ -15,16 +11,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "seriesSlug and order[] required" }, { status: 400 });
     }
 
-    await fs.mkdir(path.dirname(ORDER_FILE), { recursive: true });
-
     // Merge with existing data
     let existing: Record<string, string[]> = {};
     try {
-      existing = JSON.parse(await fs.readFile(ORDER_FILE, "utf-8"));
-    } catch { /* first time */ }
+      const response = await s3.send(
+        new GetObjectCommand({ Bucket: R2_BUCKET, Key: KEY })
+      );
+      const str = await response.Body?.transformToString();
+      if (str) {
+        existing = JSON.parse(str);
+      }
+    } catch { /* first time or file doesn't exist */ }
 
     existing[seriesSlug] = order;
-    await fs.writeFile(ORDER_FILE, JSON.stringify(existing, null, 2), "utf-8");
+    
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: KEY,
+        Body: JSON.stringify(existing, null, 2),
+        ContentType: "application/json",
+      })
+    );
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("reorder-chars error", err);
@@ -34,8 +43,11 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    const raw = await fs.readFile(ORDER_FILE, "utf-8");
-    return NextResponse.json(JSON.parse(raw));
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: R2_BUCKET, Key: KEY })
+    );
+    const str = await response.Body?.transformToString();
+    return NextResponse.json(str ? JSON.parse(str) : {});
   } catch {
     return NextResponse.json({});
   }

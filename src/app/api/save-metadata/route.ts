@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3, R2_BUCKET } from "@/lib/s3";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,11 +9,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    const metadataDir = path.join(process.cwd(), "data", "metadata");
-    await fs.mkdir(metadataDir, { recursive: true });
+    const key = `metadata/${body.id}.json`;
 
-    const filePath = path.join(metadataDir, `${body.id}.json`);
-    await fs.writeFile(filePath, JSON.stringify(body, null, 2), "utf-8");
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        Body: JSON.stringify(body, null, 2),
+        ContentType: "application/json",
+      })
+    );
 
     return NextResponse.json({ success: true, id: body.id });
   } catch (err) {

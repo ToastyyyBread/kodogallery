@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3, R2_BUCKET } from "@/lib/s3";
 
-const ORDER_FILE = path.join(process.cwd(), "data", "series-order.json");
+const KEY = "config/series-order.json";
 
-/**
- * POST /api/reorder-series
- * Body: { order: string[] }   — array of series slugs in the desired order
- * Saves the order to data/series-order.json
- */
 export async function POST(req: NextRequest) {
   try {
     const { order } = await req.json();
     if (!Array.isArray(order)) {
       return NextResponse.json({ error: "order must be an array" }, { status: 400 });
     }
-    await fs.mkdir(path.dirname(ORDER_FILE), { recursive: true });
-    await fs.writeFile(ORDER_FILE, JSON.stringify(order, null, 2), "utf-8");
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: KEY,
+        Body: JSON.stringify(order, null, 2),
+        ContentType: "application/json",
+      })
+    );
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("reorder-series error", err);
@@ -24,14 +27,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * GET /api/reorder-series
- * Returns the saved order array (or empty array if not set yet)
- */
 export async function GET() {
   try {
-    const raw = await fs.readFile(ORDER_FILE, "utf-8");
-    return NextResponse.json(JSON.parse(raw));
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: R2_BUCKET, Key: KEY })
+    );
+    const str = await response.Body?.transformToString();
+    return NextResponse.json(str ? JSON.parse(str) : []);
   } catch {
     return NextResponse.json([]);
   }

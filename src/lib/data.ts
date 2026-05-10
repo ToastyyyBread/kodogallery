@@ -20,22 +20,49 @@ function getFirstImage(item: PromptItem): string {
   return "";
 }
 
+import { s3, R2_BUCKET } from "@/lib/s3";
+import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+
 export async function getAllItems(): Promise<PromptItem[]> {
-  const metadataDir = path.join(process.cwd(), "data", "metadata");
+  const items: PromptItem[] = [];
   try {
-    const files = await fs.readdir(metadataDir);
-    const items: PromptItem[] = [];
-    for (const file of files.filter((f) => f.endsWith(".json"))) {
-      const content = await fs.readFile(path.join(metadataDir, file), "utf-8");
-      try {
-        items.push(JSON.parse(content) as PromptItem);
-      } catch (e) {
-        console.error(`Failed to parse ${file}`, e);
+    let continuationToken: string | undefined;
+    do {
+      const listRes = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: R2_BUCKET,
+          Prefix: "metadata/",
+          ContinuationToken: continuationToken,
+        })
+      );
+      if (!listRes.Contents) break;
+
+      const fetchPromises = listRes.Contents
+        .filter(obj => obj.Key?.endsWith(".json"))
+        .map(async (object) => {
+          try {
+            const getRes = await s3.send(
+              new GetObjectCommand({ Bucket: R2_BUCKET, Key: object.Key })
+            );
+            const raw = await getRes.Body?.transformToString();
+            if (raw) return JSON.parse(raw) as PromptItem;
+          } catch (e) {
+            console.error(`Failed to fetch ${object.Key}`, e);
+          }
+          return null;
+        });
+
+      const batchItems = await Promise.all(fetchPromises);
+      for (const item of batchItems) {
+        if (item) items.push(item);
       }
-    }
+      
+      continuationToken = listRes.NextContinuationToken;
+    } while (continuationToken);
+
     return items.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
   } catch (e) {
-    console.error("Failed to read metadata dir", e);
+    console.error("Failed to read metadata from S3", e);
     return [];
   }
 }
@@ -43,28 +70,27 @@ export async function getAllItems(): Promise<PromptItem[]> {
 /** Read the custom series order saved by the admin panel drag-and-drop */
 export async function getSeriesOrder(): Promise<string[]> {
   try {
-    const raw = await fs.readFile(
-      path.join(process.cwd(), "data", "series-order.json"),
-      "utf-8"
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: R2_BUCKET, Key: "config/series-order.json" })
     );
-    return JSON.parse(raw) as string[];
-  } catch {
-    return [];
-  }
+    const raw = await response.Body?.transformToString();
+    if (raw) return JSON.parse(raw) as string[];
+  } catch { }
+  return [];
 }
 
 /** Read per-series character order map: { [seriesSlug]: charSlug[] } */
 export async function getCharOrder(): Promise<Record<string, string[]>> {
   try {
-    const raw = await fs.readFile(
-      path.join(process.cwd(), "data", "char-order.json"),
-      "utf-8"
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: R2_BUCKET, Key: "config/char-order.json" })
     );
-    return JSON.parse(raw) as Record<string, string[]>;
-  } catch {
-    return {};
-  }
+    const raw = await response.Body?.transformToString();
+    if (raw) return JSON.parse(raw) as Record<string, string[]>;
+  } catch { }
+  return {};
 }
+
 
 export async function getSeriesAlbums(): Promise<SeriesAlbum[]> {
   const items = await getAllItems();
