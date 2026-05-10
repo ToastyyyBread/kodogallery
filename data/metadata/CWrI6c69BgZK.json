@@ -1,0 +1,48 @@
+{
+  "id": "CWrI6c69BgZK",
+  "title": "Mafuyu Hoshikawa — Blend S",
+  "tags": [
+    "Mafuyu Hoshikawa",
+    "Blend S"
+  ],
+  "positive_prompt": "masterpiece, best quality, amazing quality, highres, absurdres, very aesthetic, high resolution, ultra detailed, perfect details, (aged up:1.1), (anime coloring:1.2), (anime screencap:1.2) (sweating:1), 1girl, hoshikawa mafuyu, short hair, brown hair, hair between eyes, hair ribbon, purple eyes, closed eyes, opened mouth, <lora:Mafuyu_Hoshikawa_ILXL:0.8> nsfw, nude, flat breasts, cowgirl, penis, vaginal, ass, bf-dp, (extremely moaning), (trembling), (rough sex), saliva, snot, drooling, overwhelmed,  <lora:Rough_Sex_Any_position:0.4>, blushing, indoors, bed room, bed, night, messy covers, pillow, BREAK, 1boy, green hair boy, faceless, nude, hands on ass, simple shading",
+  "negative_prompt": "(bad quality, worst quality:1.2), lowres, bad anatomy, jpeg artifacts, ugly, poorly drawn, signature, watermark, username, blurry, 4-koma, sketch, (bad:1.05), error, fewer, extra, missing, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, abstract, (blurry, lowres, low quality:1.1), (big head, bad anatomy:1.05), artist name, (watermark:1.1), weibo username, derivative work, one-hour drawing challenge, jaggy lines, female pubichair, address, patreon logo, twitter username, greyscale, oekaki, sepia, curvy, wide hips, (sound effects), futanari, furry, 3d, realism, realistic, complex shading",
+  "cfg_scale": "5",
+  "sampling_steps": "20",
+  "sampling_method": "Euler a",
+  "seed": "2270083193",
+  "checkpoints": [
+    {
+      "name": "hassakuwaiIL_v10",
+      "link": "https://civitai.com/models/2093794/hassakuwaiil?modelVersionId=2368961"
+    }
+  ],
+  "loras": [
+    {
+      "name": "Mafuyu_Hoshikawa_ILXL",
+      "link": "https://civitai.red/models/1231898/mafuyu-hoshikawa-blend-s-s?modelVersionId=1388117"
+    },
+    {
+      "name": "Rough_Sex_Any_position",
+      "link": "https://civitai.red/models/734224/rough-sex-any-position"
+    }
+  ],
+  "images": [
+    {
+      "filename": "PpXuXJnXXj.webp",
+      "metadata": {
+        "positive_prompt": "masterpiece, best quality, amazing quality, highres, absurdres, very aesthetic, high resolution, ultra detailed, perfect details, (aged up:1.1), (anime coloring:1.2), (anime screencap:1.2) (sweating:1), 1girl, hoshikawa mafuyu, short hair, brown hair, hair between eyes, hair ribbon, purple eyes, closed eyes, opened mouth, <lora:Mafuyu_Hoshikawa_ILXL:0.8> nsfw, nude, flat breasts, cowgirl, penis, vaginal, ass, bf-dp, (extremely moaning), (trembling), (rough sex), saliva, snot, drooling, overwhelmed,  <lora:Rough_Sex_Any_position:0.4>, blushing, indoors, bed room, bed, night, messy covers, pillow, BREAK, 1boy, green hair boy, faceless, nude, hands on ass, simple shading",
+        "negative_prompt": "(bad quality, worst quality:1.2), lowres, bad anatomy, jpeg artifacts, ugly, poorly drawn, signature, watermark, username, blurry, 4-koma, sketch, (bad:1.05), error, fewer, extra, missing, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, abstract, (blurry, lowres, low quality:1.1), (big head, bad anatomy:1.05), artist name, (watermark:1.1), weibo username, derivative work, one-hour drawing challenge, jaggy lines, female pubichair, address, patreon logo, twitter username, greyscale, oekaki, sepia, curvy, wide hips, (sound effects), futanari, furry, 3d, realism, realistic, complex shading",
+        "sampling_steps": "20",
+        "sampling_method": "Euler a",
+        "cfg_scale": "5",
+        "seed": "2270083193",
+        "width": "832",
+        "height": "1216",
+        "model": "hassakuwaiIL_v10"
+      }
+    }
+  ],
+  "created_at": 1778406847582,
+  "char_cover_image": "cover_char_AQc0sSBe.webp"
+}

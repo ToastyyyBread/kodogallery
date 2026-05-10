@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { nanoid } from "nanoid";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, UserPlus } from "lucide-react";
 import {
   card, label, input, ImageDropzone, PromptFields,
   SubmitBtn, ErrBanner, SuccessCard, uploadFileToR2,
@@ -13,13 +13,19 @@ import type { SDMetadata } from "@/lib/sdMetadata";
 interface CharInfo { character: string; slug: string; coverImage: string; }
 interface AlbumInfo { series: string; slug: string; coverImage: string; characters: CharInfo[]; }
 
+const NEW_CHAR_VALUE = "__new__";
+
 export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: AlbumInfo[]; knownLinks?: Record<string, string> }) {
   // Selection
   const [seriesSlug, setSeriesSlug] = useState("");
   const [charSlug,   setCharSlug]   = useState("");
+  const [newCharName, setNewCharName] = useState("");
 
   const selectedSeries = albums.find(a => a.slug === seriesSlug) ?? null;
-  const selectedChar   = selectedSeries?.characters.find(c => c.slug === charSlug) ?? null;
+  const selectedChar   = charSlug === NEW_CHAR_VALUE
+    ? null
+    : selectedSeries?.characters.find(c => c.slug === charSlug) ?? null;
+  const isNewChar      = charSlug === NEW_CHAR_VALUE;
 
   // Prompt fields
   const [posPrompt, setPosPrompt] = useState("");
@@ -70,7 +76,7 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
   }, [knownLinks]);
 
   const reset = () => {
-    setSeriesSlug(""); setCharSlug("");
+    setSeriesSlug(""); setCharSlug(""); setNewCharName("");
     setPosPrompt(""); setNegPrompt(""); setCfgScale(""); setSteps("");
     setSampler(""); setSeed(""); setCheckpoints([]); setLoras([]);
     setCards([]);
@@ -79,8 +85,15 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSeries || !selectedChar || cards.length === 0) {
+
+    const characterName = isNewChar ? newCharName.trim() : selectedChar?.character;
+
+    if (!selectedSeries || (!selectedChar && !isNewChar) || cards.length === 0) {
       setErrMsg("Select a series, character, and add at least one image.");
+      return;
+    }
+    if (isNewChar && !newCharName.trim()) {
+      setErrMsg("Enter a name for the new character.");
       return;
     }
     setStatus("uploading"); setErrMsg("");
@@ -90,17 +103,17 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
       const filenames: string[] = [];
       for (const c of cards) {
         setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: true } : x));
-        await uploadFileToR2(c.file, c.filename);
-        setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: false, done: true } : x));
-        filenames.push(c.filename);
+        const actualFilename = await uploadFileToR2(c.file, c.filename);
+        setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: false, done: true, filename: actualFilename } : x));
+        filenames.push(actualFilename);
       }
 
       // Save metadata — tags[0]=character, tags[1]=series (same convention)
       const id = nanoid(12);
       const payload = {
         id,
-        title: `${selectedChar.character} — ${selectedSeries.series}`,
-        tags: [selectedChar.character, selectedSeries.series],
+        title: `${characterName} — ${selectedSeries.series}`,
+        tags: [characterName, selectedSeries.series],
         positive_prompt: posPrompt || undefined,
         negative_prompt: negPrompt || undefined,
         cfg_scale:        cfgScale  || undefined,
@@ -109,8 +122,8 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
         seed:             seed      || undefined,
         checkpoints:      checkpoints.filter(c => c.name.trim()),
         loras:            loras.filter(l => l.name.trim()),
-        images: cards.map(c => ({
-          filename: c.filename,
+        images: cards.map((c, i) => ({
+          filename: filenames[i],
           metadata: c.meta ? {
             positive_prompt: c.meta.positive_prompt || undefined,
             negative_prompt: c.meta.negative_prompt || undefined,
@@ -161,7 +174,7 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
             <p style={label}>Series</p>
             <select
               value={seriesSlug}
-              onChange={e => { setSeriesSlug(e.target.value); setCharSlug(""); }}
+              onChange={e => { setSeriesSlug(e.target.value); setCharSlug(""); setNewCharName(""); }}
               required
               style={selectStyle}
             >
@@ -176,7 +189,7 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
             <p style={label}>Character</p>
             <select
               value={charSlug}
-              onChange={e => setCharSlug(e.target.value)}
+              onChange={e => { setCharSlug(e.target.value); if (e.target.value !== NEW_CHAR_VALUE) setNewCharName(""); }}
               required
               disabled={!selectedSeries}
               style={{ ...selectStyle, opacity: !selectedSeries ? 0.4 : 1 }}
@@ -185,12 +198,36 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
               {selectedSeries?.characters.map(c => (
                 <option key={c.slug} value={c.slug}>{c.character}</option>
               ))}
+              {selectedSeries && (
+                <option value={NEW_CHAR_VALUE}>＋ Add New Character…</option>
+              )}
             </select>
           </div>
         </div>
 
-        {/* Selected summary */}
-        {selectedSeries && selectedChar && (
+        {/* New character name input */}
+        {isNewChar && selectedSeries && (
+          <div style={{ marginTop: "var(--space-3)" }}>
+            <p style={label}>New Character Name</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <UserPlus style={{ width: "16px", color: "var(--accent)", flexShrink: 0 }} />
+              <input
+                value={newCharName}
+                onChange={e => setNewCharName(e.target.value)}
+                placeholder="e.g. Kaho Hinata"
+                required
+                autoFocus
+                style={input}
+              />
+            </div>
+            <p style={{ fontSize: "10px", color: "var(--text-3)", marginTop: "4px" }}>
+              This character will be added to <strong style={{ color: "var(--accent)" }}>{selectedSeries.series}</strong>
+            </p>
+          </div>
+        )}
+
+        {/* Selected summary — existing character */}
+        {selectedSeries && selectedChar && !isNewChar && (
           <div style={{ marginTop: "var(--space-3)", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", background: "var(--accent-bg)", border: "1px solid var(--accent-border)" }}>
             {selectedChar.coverImage && (
               <img
@@ -205,12 +242,25 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
             </div>
           </div>
         )}
+
+        {/* Selected summary — new character */}
+        {selectedSeries && isNewChar && newCharName.trim() && (
+          <div style={{ marginTop: "var(--space-3)", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "8px", background: "oklch(0.22 0.06 145 / 0.3)", border: "1px solid oklch(0.35 0.12 145)" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "oklch(0.28 0.08 145 / 0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <UserPlus style={{ width: "16px", color: "oklch(0.72 0.16 145)" }} />
+            </div>
+            <div>
+              <p style={{ fontSize: "12px", fontWeight: 700, color: "oklch(0.72 0.16 145)" }}>{newCharName.trim()} <span style={{ fontSize: "9px", fontWeight: 600, padding: "1px 6px", borderRadius: "99px", background: "oklch(0.28 0.08 145 / 0.4)", color: "oklch(0.72 0.16 145)", marginLeft: "4px" }}>NEW</span></p>
+              <p style={{ fontSize: "10px", color: "var(--text-3)" }}>{selectedSeries.series}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Images */}
       <div style={card}>
         <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Images *</p>
-        <p style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "var(--space-3)" }}>SD metadata auto-detected from PNG/WebP.</p>
+        <p style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "var(--space-3)" }}>SD metadata auto-detected from PNG/WebP. Images auto-converted to WebP.</p>
         <ImageDropzone cards={cards} setCards={setCards} imgRef={imgRef} applyMeta={applyMeta} />
       </div>
 
@@ -222,7 +272,7 @@ export default function AddToAlbumForm({ albums, knownLinks = {} }: { albums: Al
       </div>
 
       {errMsg && <ErrBanner msg={errMsg} />}
-      <SubmitBtn loading={status === "uploading"} label="Add to Album" />
+      <SubmitBtn loading={status === "uploading"} label={isNewChar ? "Create Character & Add" : "Add to Album"} />
     </form>
   );
 }

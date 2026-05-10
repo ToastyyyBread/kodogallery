@@ -13,6 +13,7 @@ export interface ImageItem {
     seed?: string;
     width?: string;
     height?: string;
+    model?: string;
   };
 }
 

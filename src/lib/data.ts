@@ -40,6 +40,32 @@ export async function getAllItems(): Promise<PromptItem[]> {
   }
 }
 
+/** Read the custom series order saved by the admin panel drag-and-drop */
+export async function getSeriesOrder(): Promise<string[]> {
+  try {
+    const raw = await fs.readFile(
+      path.join(process.cwd(), "data", "series-order.json"),
+      "utf-8"
+    );
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+/** Read per-series character order map: { [seriesSlug]: charSlug[] } */
+export async function getCharOrder(): Promise<Record<string, string[]>> {
+  try {
+    const raw = await fs.readFile(
+      path.join(process.cwd(), "data", "char-order.json"),
+      "utf-8"
+    );
+    return JSON.parse(raw) as Record<string, string[]>;
+  } catch {
+    return {};
+  }
+}
+
 export async function getSeriesAlbums(): Promise<SeriesAlbum[]> {
   const items = await getAllItems();
   const seriesMap = new Map<string, Map<string, PromptItem[]>>();
@@ -96,8 +122,39 @@ export async function getSeriesAlbums(): Promise<SeriesAlbum[]> {
     });
   }
 
-  return albums.sort((a, b) => a.series.localeCompare(b.series));
+  // Apply custom character order per series
+  const charOrder = await getCharOrder();
+  for (const album of albums) {
+    const savedCharOrder = charOrder[album.slug];
+    if (savedCharOrder && savedCharOrder.length > 0) {
+      album.characters.sort((a, b) => {
+        const ia = savedCharOrder.indexOf(a.slug);
+        const ib = savedCharOrder.indexOf(b.slug);
+        if (ia === -1 && ib === -1) return a.character.localeCompare(b.character);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+    }
+  }
+
+  // Apply custom order (saved by admin panel drag-and-drop)
+  const savedOrder = await getSeriesOrder();
+  if (savedOrder.length > 0) {
+    albums.sort((a, b) => {
+      const ia = savedOrder.indexOf(a.slug);
+      const ib = savedOrder.indexOf(b.slug);
+      if (ia === -1 && ib === -1) return a.series.localeCompare(b.series);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  } else {
+    albums.sort((a, b) => a.series.localeCompare(b.series));
+  }
+  return albums;
 }
+
 
 export async function getSeriesBySlug(slug: string): Promise<SeriesAlbum | null> {
   const albums = await getSeriesAlbums();

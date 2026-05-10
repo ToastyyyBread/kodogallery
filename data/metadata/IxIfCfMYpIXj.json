@@ -1,0 +1,44 @@
+{
+  "id": "IxIfCfMYpIXj",
+  "title": "Aika Sakuranomiya — Blend S",
+  "tags": [
+    "Aika Sakuranomiya",
+    "Blend S"
+  ],
+  "positive_prompt": "masterpiece, best quality, amazing quality, highres, absurdres, very aesthetic, high resolution, ultra detailed, perfect details, 1girl, <lora:Aika_Sakuranomiya_ILXL:0.8> sakuranimiya aika, long hiar, black hair, double-parted bangs, sidelocks, purple eyes, nsfw, nude, small breasts, blush, looking up, deepthroat, mouth, fellatio, cum, facial, rough sex, saliva, snot, drooling, overwhelmed, 1 hand hold penis, on bed, bedroom, indoors, (aged up:1.4), (anime coloring:1.2), (anime screencap:1.2) (sweating:1), dutch angle, night, dramatic lighting",
+  "negative_prompt": "(bad quality, worst quality:1.2), lowres, bad anatomy, jpeg artifacts, ugly, poorly drawn, signature, watermark, username, blurry, 4-koma, sketch, (bad:1.05), error, fewer, extra, missing, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, abstract, (blurry, lowres, low quality:1.1), (big head, bad anatomy:1.05), artist name, (watermark:1.1), weibo username, derivative work, one-hour drawing challenge, jaggy lines, female pubichair, address, patreon logo, twitter username, greyscale, oekaki, sepia, curvy, wide hips, (sound effects), futanari, furry, 3d, realism, realistic, curtain, curtains",
+  "cfg_scale": "5",
+  "sampling_steps": "20",
+  "sampling_method": "Euler a",
+  "seed": "1392795471",
+  "checkpoints": [
+    {
+      "name": "hassakuwaiIL_v10",
+      "link": "https://civitai.com/models/2093794/hassakuwaiil?modelVersionId=2368961"
+    }
+  ],
+  "loras": [
+    {
+      "name": "Aika_Sakuranomiya_ILXL",
+      "link": "https://civitai.red/models/1234828/aika-sakuranomiya-blend-s-s?modelVersionId=1391598"
+    }
+  ],
+  "images": [
+    {
+      "filename": "OhqYTdrUZ8.webp",
+      "metadata": {
+        "positive_prompt": "masterpiece, best quality, amazing quality, highres, absurdres, very aesthetic, high resolution, ultra detailed, perfect details, 1girl, <lora:Aika_Sakuranomiya_ILXL:0.8> sakuranimiya aika, long hiar, black hair, double-parted bangs, sidelocks, purple eyes, nsfw, nude, small breasts, blush, looking up, deepthroat, mouth, fellatio, cum, facial, rough sex, saliva, snot, drooling, overwhelmed, 1 hand hold penis, on bed, bedroom, indoors, (aged up:1.4), (anime coloring:1.2), (anime screencap:1.2) (sweating:1), dutch angle, night, dramatic lighting",
+        "negative_prompt": "(bad quality, worst quality:1.2), lowres, bad anatomy, jpeg artifacts, ugly, poorly drawn, signature, watermark, username, blurry, 4-koma, sketch, (bad:1.05), error, fewer, extra, missing, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, abstract, (blurry, lowres, low quality:1.1), (big head, bad anatomy:1.05), artist name, (watermark:1.1), weibo username, derivative work, one-hour drawing challenge, jaggy lines, female pubichair, address, patreon logo, twitter username, greyscale, oekaki, sepia, curvy, wide hips, (sound effects), futanari, furry, 3d, realism, realistic, curtain, curtains",
+        "sampling_steps": "20",
+        "sampling_method": "Euler a",
+        "cfg_scale": "5",
+        "seed": "1392795471",
+        "width": "832",
+        "height": "1216",
+        "model": "hassakuwaiIL_v10"
+      }
+    }
+  ],
+  "created_at": 1778407514907,
+  "char_cover_image": "cover_char_kegbJI3Y.webp"
+}

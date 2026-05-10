@@ -75,7 +75,7 @@ export default async function SeriesPage({
           </p>
         </div>
 
-        {/* Characters — strict 3 columns */}
+        {/* Characters — 4 columns on desktop */}
         <p
           style={{
             fontSize: "10px",
@@ -90,9 +90,10 @@ export default async function SeriesPage({
         </p>
 
         <div
+          className="char-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(4, 1fr)",
             gap: "var(--space-4)",
           }}
         >
@@ -130,7 +131,7 @@ export default async function SeriesPage({
                       alt={char.character}
                       fill
                       style={{ objectFit: "cover", objectPosition: "top" }}
-                      sizes="(max-width: 768px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       unoptimized
                     />
                   ) : (
@@ -173,3 +174,4 @@ export default async function SeriesPage({
     </main>
   );
 }
+

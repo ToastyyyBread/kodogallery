@@ -2,7 +2,10 @@
 
 import { useState, useRef } from "react";
 import { nanoid } from "nanoid";
-import { ImageIcon, Upload, CheckCircle2, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ImageIcon, Upload, CheckCircle2, Loader2,
+  ChevronDown, ChevronRight, GripVertical,
+} from "lucide-react";
 
 import type { SeriesAlbum as AlbumInfo } from "@/lib/types";
 
@@ -86,9 +89,7 @@ function CoverCell({
           style={{
             position: "absolute",
             inset: 0,
-            background: displayUrl
-              ? "oklch(0 0 0 / 0.45)"
-              : "transparent",
+            background: displayUrl ? "oklch(0 0 0 / 0.45)" : "transparent",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -138,8 +139,25 @@ function CoverCell({
 
 // ── Series row ────────────────────────────────────────────────
 
-function SeriesRow({ album }: { album: AlbumInfo }) {
+type CharInfo = AlbumInfo["characters"][number];
+
+function SeriesRow({
+  album,
+  dragHandleProps,
+  isDragging,
+}: {
+  album: AlbumInfo;
+  dragHandleProps: React.HTMLAttributes<HTMLDivElement>;
+  isDragging: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  // Local character list for drag-reorder
+  const [chars, setChars] = useState<CharInfo[]>(album.characters);
+
+  // Char drag state
+  const charDragIdx  = useRef<number | null>(null);
+  const [charDragOver,   setCharDragOver]   = useState<number | null>(null);
+  const [charDraggingIdx, setCharDraggingIdx] = useState<number | null>(null);
 
   const uploadCover = async (
     file: File,
@@ -150,7 +168,6 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
     const ext      = file.name.split(".").pop()!.toLowerCase();
     const filename = `cover_${type}_${nanoid(8)}.${ext}`;
 
-    // 1. Upload via server-side proxy (avoids CORS on direct R2 PUT)
     const form = new FormData();
     form.append("file", file);
     form.append("filename", filename);
@@ -159,34 +176,98 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
     const uploadRes = await fetch("/api/upload-file", { method: "POST", body: form });
     if (!uploadRes.ok) throw new Error("Upload to R2 failed");
 
-    // 2. Patch all matching metadata JSONs
+    const uploadData = await uploadRes.json();
+    const storedFilename = (uploadData.filename as string) || filename;
+
     await fetch("/api/update-cover", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, type, seriesName, characterName }),
+      body: JSON.stringify({ filename: storedFilename, type, seriesName, characterName }),
     });
+  };
+
+  const saveCharOrder = async (ordered: CharInfo[]) => {
+    await fetch("/api/reorder-chars", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        seriesSlug: album.slug,
+        order: ordered.map(c => c.slug),
+      }),
+    });
+  };
+
+  const handleCharDragStart = (i: number) => {
+    charDragIdx.current = i;
+    setCharDraggingIdx(i);
+  };
+
+  const handleCharDragEnter = (i: number) => {
+    if (charDragIdx.current === null || charDragIdx.current === i) return;
+    setCharDragOver(i);
+  };
+
+  const handleCharDragEnd = () => {
+    if (charDragIdx.current === null || charDragOver === null || charDragIdx.current === charDragOver) {
+      charDragIdx.current = null;
+      setCharDraggingIdx(null);
+      setCharDragOver(null);
+      return;
+    }
+    const next = [...chars];
+    const [moved] = next.splice(charDragIdx.current, 1);
+    next.splice(charDragOver, 0, moved);
+    setChars(next);
+    saveCharOrder(next);
+    charDragIdx.current = null;
+    setCharDraggingIdx(null);
+    setCharDragOver(null);
   };
 
   return (
     <div
       style={{
         background: "var(--bg-raised)",
-        border: "1px solid var(--border)",
+        border: `1px solid ${isDragging ? "var(--accent-border)" : "var(--border)"}`,
         borderRadius: "16px",
         overflow: "hidden",
         marginBottom: "var(--space-3)",
+        opacity: isDragging ? 0.55 : 1,
+        transition: "border-color 150ms ease, opacity 150ms ease",
+        boxShadow: isDragging ? "0 0 0 2px var(--accent)" : "none",
       }}
     >
       {/* Series header row */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr auto auto",
+          gridTemplateColumns: "auto 1fr auto auto",
           alignItems: "center",
-          gap: "var(--space-4)",
+          gap: "var(--space-3)",
           padding: "var(--space-4) var(--space-5)",
         }}
       >
+        {/* Drag handle — series reorder */}
+        <div
+          {...dragHandleProps}
+          title="Drag to reorder series"
+          style={{
+            cursor: "grab",
+            color: "var(--border-hi)",
+            display: "flex",
+            alignItems: "center",
+            padding: "4px 2px",
+            borderRadius: "6px",
+            transition: "color 150ms ease",
+            userSelect: "none",
+            touchAction: "none",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-3)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--border-hi)")}
+        >
+          <GripVertical style={{ width: "16px", height: "16px" }} />
+        </div>
+
         {/* Series info + cover */}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
           <button
@@ -245,7 +326,7 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
         </div>
       </div>
 
-      {/* Characters — collapsible */}
+      {/* Characters — collapsible + draggable */}
       {open && (
         <div
           style={{
@@ -253,18 +334,25 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
             padding: "var(--space-4) var(--space-5) var(--space-5)",
           }}
         >
-          <p
-            style={{
-              fontSize: "10px",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--text-3)",
-              marginBottom: "var(--space-4)",
-            }}
-          >
-            Character Covers (4:5)
-          </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+            <p
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-3)",
+                margin: 0,
+              }}
+            >
+              Character Covers (4:5)
+            </p>
+            <span style={{ fontSize: "10px", color: "var(--border-hi)", display: "flex", alignItems: "center", gap: "3px" }}>
+              <GripVertical style={{ width: "10px" }} /> drag to reorder
+            </span>
+          </div>
+
+          {/* Draggable character grid — uses flex-wrap so drop targets work between cells */}
           <div
             style={{
               display: "grid",
@@ -272,8 +360,40 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
               gap: "var(--space-4)",
             }}
           >
-            {album.characters.map((char) => (
-              <div key={char.slug} className="cover-cell">
+            {chars.map((char, i) => (
+              <div
+                key={char.slug}
+                draggable
+                onDragStart={() => handleCharDragStart(i)}
+                onDragEnter={() => handleCharDragEnter(i)}
+                onDragOver={e => { e.preventDefault(); handleCharDragEnter(i); }}
+                onDragEnd={handleCharDragEnd}
+                className="cover-cell"
+                style={{
+                  position: "relative",
+                  cursor: "grab",
+                  opacity: charDraggingIdx === i ? 0.4 : 1,
+                  outline: charDragOver === i && charDraggingIdx !== i
+                    ? "2px solid var(--accent)"
+                    : "2px solid transparent",
+                  outlineOffset: "3px",
+                  borderRadius: "10px",
+                  transition: "opacity 150ms ease, outline 150ms ease",
+                }}
+              >
+                {/* Drag hint badge */}
+                <div style={{
+                  position: "absolute",
+                  top: "4px",
+                  right: "4px",
+                  zIndex: 5,
+                  background: "oklch(0 0 0 / 0.55)",
+                  borderRadius: "6px",
+                  padding: "2px 3px",
+                  pointerEvents: "none",
+                }}>
+                  <GripVertical style={{ width: "10px", height: "10px", color: "white" }} />
+                </div>
                 <CoverCell
                   label={char.character}
                   currentImage={char.coverImage}
@@ -293,10 +413,55 @@ function SeriesRow({ album }: { album: AlbumInfo }) {
 
 // ── Main component ────────────────────────────────────────────
 
-export default function CoverManager({ albums }: { albums: AlbumInfo[] }) {
+export default function CoverManager({ albums: initialAlbums }: { albums: AlbumInfo[] }) {
+  const [albums, setAlbums] = useState<AlbumInfo[]>(initialAlbums);
+
+  // ── Drag state
+  const dragIndexRef  = useRef<number | null>(null);  // which row is being dragged
+  const [dragOver, setDragOver] = useState<number | null>(null); // hover target index
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+
+  const saveOrder = async (ordered: AlbumInfo[]) => {
+    await fetch("/api/reorder-series", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: ordered.map(a => a.slug) }),
+    });
+  };
+
+  const handleDragStart = (index: number) => {
+    dragIndexRef.current = index;
+    setDraggingIdx(index);
+  };
+
+  const handleDragEnter = (index: number) => {
+    if (dragIndexRef.current === null || dragIndexRef.current === index) return;
+    setDragOver(index);
+  };
+
+  const handleDragEnd = () => {
+    if (dragIndexRef.current === null || dragOver === null || dragIndexRef.current === dragOver) {
+      dragIndexRef.current = null;
+      setDraggingIdx(null);
+      setDragOver(null);
+      return;
+    }
+
+    const next = [...albums];
+    const [moved] = next.splice(dragIndexRef.current, 1);
+    next.splice(dragOver, 0, moved);
+    setAlbums(next);
+    saveOrder(next);
+
+    dragIndexRef.current = null;
+    setDraggingIdx(null);
+    setDragOver(null);
+  };
+
   return (
     <div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
       {albums.length === 0 ? (
         <div
           style={{
@@ -311,7 +476,46 @@ export default function CoverManager({ albums }: { albums: AlbumInfo[] }) {
           <p style={{ fontSize: "14px" }}>No series found. Upload some generations first.</p>
         </div>
       ) : (
-        albums.map((album) => <SeriesRow key={album.slug} album={album} />)
+        <>
+          <p style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "var(--space-4)" }}>
+            <GripVertical style={{ width: "12px", display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
+            Drag the handle on the left to reorder series.
+          </p>
+          {albums.map((album, i) => (
+            <div
+              key={album.slug}
+              onDragOver={e => { e.preventDefault(); handleDragEnter(i); }}
+              style={{
+                position: "relative",
+                transition: "transform 200ms ease",
+              }}
+            >
+              {/* Drop indicator line above */}
+              {dragOver === i && draggingIdx !== null && draggingIdx !== i && (
+                <div style={{
+                  position: "absolute",
+                  top: -3,
+                  left: 0,
+                  right: 0,
+                  height: "3px",
+                  background: "var(--accent)",
+                  borderRadius: "99px",
+                  zIndex: 10,
+                  pointerEvents: "none",
+                }} />
+              )}
+              <SeriesRow
+                album={album}
+                isDragging={draggingIdx === i}
+                dragHandleProps={{
+                  draggable: true,
+                  onDragStart: () => handleDragStart(i),
+                  onDragEnd: handleDragEnd,
+                }}
+              />
+            </div>
+          ))}
+        </>
       )}
     </div>
   );

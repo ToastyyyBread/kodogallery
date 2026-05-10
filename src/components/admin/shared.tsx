@@ -294,7 +294,9 @@ export async function uploadFileToR2(file: File, filename: string, folder = "ima
   form.append("folder", folder);
   const res = await fetch("/api/upload-file", { method: "POST", body: form });
   if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
-  return filename;
+  const data = await res.json();
+  // Server may convert PNG→WebP, return the actual stored filename
+  return (data.filename as string) || filename;
 }
 
 // ── Success state ─────────────────────────────────────────────

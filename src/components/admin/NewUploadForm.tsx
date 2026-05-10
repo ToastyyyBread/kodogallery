@@ -94,9 +94,9 @@ export default function NewUploadForm({ knownLinks = {} }: { knownLinks?: Record
       const filenames: string[] = [];
       for (const c of cards) {
         setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: true } : x));
-        await uploadFileToR2(c.file, c.filename);
-        setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: false, done: true } : x));
-        filenames.push(c.filename);
+        const actualFilename = await uploadFileToR2(c.file, c.filename);
+        setCards(prev => prev.map(x => x.id === c.id ? { ...x, uploading: false, done: true, filename: actualFilename } : x));
+        filenames.push(actualFilename);
       }
 
       // Upload covers
@@ -126,8 +126,8 @@ export default function NewUploadForm({ knownLinks = {} }: { knownLinks?: Record
         seed:             seed      || undefined,
         checkpoints:      checkpoints.filter(c => c.name.trim()),
         loras:            loras.filter(l => l.name.trim()),
-        images: cards.map(c => ({
-          filename: c.filename,
+        images: cards.map((c, i) => ({
+          filename: filenames[i],
           metadata: c.meta ? {
             positive_prompt: c.meta.positive_prompt || undefined,
             negative_prompt: c.meta.negative_prompt || undefined,
@@ -211,7 +211,7 @@ export default function NewUploadForm({ knownLinks = {} }: { knownLinks?: Record
       {/* Images */}
       <div style={card}>
         <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Images *</p>
-        <p style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "var(--space-3)" }}>PNG/WebP with A1111/Forge metadata → auto-fills prompt fields below.</p>
+        <p style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "var(--space-3)" }}>PNG/WebP with A1111/Forge metadata → auto-fills prompts. Images auto-converted to WebP.</p>
         <ImageDropzone cards={cards} setCards={setCards} imgRef={imgRef} applyMeta={applyMeta} />
       </div>
 

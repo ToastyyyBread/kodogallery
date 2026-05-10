@@ -193,3 +193,7 @@ img {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ─── Series Page: Character Grid ──────────────────────────── */
+@media (max-width: 1023px) { .char-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+@media (max-width: 639px)  { .char-grid { grid-template-columns: repeat(2, 1fr) !important; } }
